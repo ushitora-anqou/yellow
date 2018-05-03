@@ -10,8 +10,78 @@ namespace yellow {
 #define YELLOW_ASSERT(cond) assert(cond);
 #define YELLOW_RANGE(con) std::begin(con), std::end(con)
 
-namespace twitter {
-}
+class TwitterClient {
+private:
+    twitCurl twit_;
+
+private:
+    template <class Func>
+    picojson::value get_json_response(Func func)
+    {
+        func();
+        std::string msg;
+        twit_.getLastWebResponse(msg);
+        picojson::value json;
+        picojson::parse(json, msg);
+        return json;
+    }
+
+public:
+    TwitterClient(const std::string& username, const std::string& password)
+    {
+        static const std::string
+            consumer_key = "gvvptGxzifQsssUppNBTxC25m",
+            consumer_secret =
+                "g5wny2GLzP5V8Naza9kFNdGfhuDMmceTJyMhDwyzUTF0y9KGlT";
+
+        twit_.setTwitterUsername(username);
+        twit_.setTwitterPassword(password);
+        twit_.getOAuth().setConsumerKey(consumer_key);
+        twit_.getOAuth().setConsumerSecret(consumer_secret);
+    }
+
+    std::string get_token_key()
+    {
+        std::string key;
+        twit_.getOAuth().getOAuthTokenKey(key);
+        return key;
+    }
+    std::string get_token_secret()
+    {
+        std::string secret;
+        twit_.getOAuth().getOAuthTokenSecret(secret);
+        return secret;
+    }
+
+    void set_token_key(const std::string& key)
+    {
+        twit_.getOAuth().setOAuthTokenKey(key);
+    }
+    void set_token_secret(const std::string& secret)
+    {
+        twit_.getOAuth().setOAuthTokenSecret(secret);
+    }
+
+    template <class Callback>
+    void set_token_key_and_secret_by_pin(Callback cb)
+    {
+        std::string url;
+        twit_.oAuthRequestToken(url);
+        std::string pin = cb(url);
+        twit_.getOAuth().setOAuthPin(pin);
+        twit_.oAuthAccessToken();
+    }
+
+    picojson::value get_account__verify_credentials()
+    {
+        return get_json_response([&]() { twit_.accountVerifyCredGet(); });
+    }
+
+    picojson::value get_statuses__home_timeline()
+    {
+        return get_json_response([&]() { twit_.timelineHomeGet(); });
+    }
+};
 }  // namespace yellow
 
 bool does_file_exist(const std::string& filename)
@@ -34,64 +104,36 @@ picojson::value read_json(const std::string& filename)
 int main(int argc, char** argv)
 {
     YELLOW_ASSERT(argc == 3);
-    std::string username = argv[0], password = argv[1];
-    twitCurl twit;
-    twit.setTwitterUsername(username);
-    twit.setTwitterPassword(password);
-    twit.getOAuth().setConsumerKey("gvvptGxzifQsssUppNBTxC25m");
-    twit.getOAuth().setConsumerSecret(
-        "g5wny2GLzP5V8Naza9kFNdGfhuDMmceTJyMhDwyzUTF0y9KGlT");
+    yellow::TwitterClient client(argv[1], argv[2]);
 
     static const std::string cache_filename = "cache.json";
     if (does_file_exist(cache_filename)) {
         std::cout << "read cache" << std::endl;
-        [&twit]() {
-            auto json = read_json(cache_filename).get<picojson::object>();
-            twit.getOAuth().setOAuthTokenKey(
-                json["token_key"].get<std::string>());
-            twit.getOAuth().setOAuthTokenSecret(
-                json["token_secret"].get<std::string>());
-        }();
+        auto json = read_json(cache_filename).get<picojson::object>();
+        client.set_token_key(json["token_key"].get<std::string>());
+        client.set_token_secret(json["token_secret"].get<std::string>());
     }
     else {
         std::cout << "pin" << std::endl;
-        std::string url, pin;
-        twit.oAuthRequestToken(url);
-        std::cout << url << std::endl;
-        std::cin >> pin;
-        twit.getOAuth().setOAuthPin(pin);
-
-        std::cout << "token key / token secret" << std::endl;
-        twit.oAuthAccessToken();
-        std::string token_key, token_secret;
-        twit.getOAuth().getOAuthTokenKey(token_key);
-        twit.getOAuth().getOAuthTokenSecret(token_secret);
+        client.set_token_key_and_secret_by_pin([](const std::string& url) {
+            std::string pin;
+            std::cout << url << std::endl;
+            std::cin >> pin;
+            return pin;
+        });
 
         std::ofstream ofs(cache_filename);
         YELLOW_ASSERT(ofs);
-        ofs << "{\"token_key\":\"" << token_key << "\", \"token_secret\":\""
-            << token_secret << "\"}" << std::endl;
+        ofs << "{\"token_key\":\"" << client.get_token_key()
+            << "\", \"token_secret\":\"" << client.get_token_secret() << "\"}"
+            << std::endl;
     }
 
-    std::cout << "account credentials verification" << std::endl;
-    [&twit]() {
-        YELLOW_ASSERT(twit.accountVerifyCredGet());
-        std::string msg;
-        twit.getLastWebResponse(msg);
-        picojson::value json;
-        picojson::parse(json, msg);
-        std::cout << json << std::endl;
-    }();
+    std::cout << "account credentials verification" << std::endl
+              << client.get_account__verify_credentials() << std::endl;
 
-    std::cout << "home timeline" << std::endl;
-    [&twit]() {
-        YELLOW_ASSERT(twit.timelineHomeGet());
-        std::string msg;
-        twit.getLastWebResponse(msg);
-        picojson::value json;
-        picojson::parse(json, msg);
-        std::cout << json << std::endl;
-    }();
+    std::cout << "home timeline" << std::endl
+              << client.get_statuses__home_timeline() << std::endl;
 
     return 0;
 }

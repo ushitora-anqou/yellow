@@ -11,3 +11,16 @@
 
 [Yellow](http://www.nicovideo.jp/watch/1278053029)
 
+## 使い方
+
+- `make`
+- `./main TwitterID Password`
+
+## ライセンス
+
+このプロジェクトで書かれた部分はMIT Licenseで浄化されています。
+それ以外（`vendor`以下）のソースコードは各々のライセンスに依存します。
+
+- `picojson` は[PicoJSON](https://github.com/kazuho/picojson)から引っ張ってきました。2条項BSDライセンスです。
+- `twitcurl` は[twitcurl](https://github.com/swatkat/twitcurl)から引っ張ってきました。ライセンス不明です。
+

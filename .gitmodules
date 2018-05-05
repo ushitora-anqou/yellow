@@ -1,0 +1,6 @@
+[submodule "vendor/twitcurl"]
+	path = vendor/twitcurl
+	url = https://github.com/ushitora-anqou/twitcurl.git
+[submodule "vendor/picojson"]
+	path = vendor/picojson
+	url = https://github.com/kazuho/picojson.git

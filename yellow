@@ -1,0 +1,2 @@
+#!/bin/sh
+LD_LIBRARY_PATH=./vendor/twitcurl/lib ./main u_anqou_yellow 4fe12a6c-2a2a-4e17-befb-2889f82c024b

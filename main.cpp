@@ -1,6 +1,8 @@
 #include <cassert>
+#include <chrono>
 #include <iostream>
 #include <sstream>
+#include <thread>
 
 #include "picojson.h"
 #include "twitcurl.h"
@@ -81,6 +83,17 @@ public:
     {
         return get_json_response([&]() { twit_.timelineHomeGet(); });
     }
+
+    template <class Callback>
+    void get_userstream(Callback cb)
+    {
+        twit_.usertimeline([cb](const std::string& src) {
+            std::cout << "DENUG" << src << std::endl;
+            // picojson::value ret;
+            // picojson::parse(ret, src);
+            // return cb(ret);
+        });
+    }
 };
 }  // namespace yellow
 
@@ -131,9 +144,12 @@ int main(int argc, char** argv)
 
     std::cout << "account credentials verification" << std::endl
               << client.get_account__verify_credentials() << std::endl;
+    std::cout << "account credentials verification" << std::endl
+              << client.get_account__verify_credentials() << std::endl;
 
-    std::cout << "home timeline" << std::endl
-              << client.get_statuses__home_timeline() << std::endl;
+    client.get_userstream([](const picojson::value& json) {
+        // std::cout << "DEBNG" << json << std::endl;
+    });
 
     return 0;
 }

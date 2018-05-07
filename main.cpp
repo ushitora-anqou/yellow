@@ -29,15 +29,13 @@ private:
     }
 
 public:
-    TwitterClient(const std::string& username, const std::string& password)
+    TwitterClient()
     {
         static const std::string
             consumer_key = "gvvptGxzifQsssUppNBTxC25m",
             consumer_secret =
                 "g5wny2GLzP5V8Naza9kFNdGfhuDMmceTJyMhDwyzUTF0y9KGlT";
 
-        twit_.setTwitterUsername(username);
-        twit_.setTwitterPassword(password);
         twit_.getOAuth().setConsumerKey(consumer_key);
         twit_.getOAuth().setConsumerSecret(consumer_secret);
     }
@@ -116,8 +114,7 @@ picojson::value read_json(const std::string& filename)
 
 int main(int argc, char** argv)
 {
-    YELLOW_ASSERT(argc == 3);
-    yellow::TwitterClient client(argv[1], argv[2]);
+    yellow::TwitterClient client;
 
     static const std::string cache_filename = "cache.json";
     if (does_file_exist(cache_filename)) {

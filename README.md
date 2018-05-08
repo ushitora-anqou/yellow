@@ -22,8 +22,8 @@
 このプロジェクトで書かれた部分はMIT Licenseで浄化されています。
 それ以外（`vendor`以下）のソースコードは各々のライセンスに依存します。
 
-- `picojson` は[PicoJSON](https://github.com/kazuho/picojson)から引っ張ってきました。2条項BSDライセンスです。
-- `twitcurl` は[twitcurl](https://github.com/swatkat/twitcurl)から引っ張ってきました。ライセンス不明です。
+- `picojson` は[PicoJSON](https://github.com/kazuho/picojson)から引っ張ってきました。[2条項BSDライセンス](https://github.com/kazuho/picojson/blob/master/LICENSE) です。
+- `twitcurl` は[twitcurl](https://github.com/swatkat/twitcurl)から引っ張ってきました。[MITライセンス](https://github.com/swatkat/twitcurl/blob/master/libtwitcurl/COPYING) です。
 
 ## 構想
 

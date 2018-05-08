@@ -15,7 +15,7 @@
 
 - `cd vendor/twitcurl/libtwitcurl && make install`
 - `make`
-- `./yellow TwitterID Password`
+- `./yellow`
 
 ## ライセンス
 

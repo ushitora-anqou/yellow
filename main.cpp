@@ -12,6 +12,14 @@
 #include "config.hpp"
 
 namespace yellow {
+namespace helper {
+picojson::value str2json(const std::string& str)
+{
+    picojson::value ret;
+    picojson::parse(ret, str);
+    return ret;
+}
+}  // namespace helper
 
 #define YELLOW_ASSERT(cond) assert(cond);
 #define YELLOW_RANGE(con) std::begin(con), std::end(con)
@@ -190,18 +198,28 @@ public:
     // Userstream を得るための関数。user.json
     void stream_user_json(std::function<void(const picojson::value&)> func)
     {
-        std::stringstream ss;
-        stream_get("https://userstream.twitter.com/1.1/user.json",
-                   [&ss](const std::string& src) {
-                       std::cout << src << std::endl;
-                       // ss << src;
-                       // for (std::string line; std::getline(ss, line);) {
-                       //    if (ss.eof())
-                       //        ss << line;
-                       //    else
-                       //        func(line);
-                       //}
-                   });
+        std::string prev;
+        stream_get(
+            "https://userstream.twitter.com/1.1/user.json",
+            [&prev, &func](const std::string& src) {
+                // \r\nで入力を区切り、funcに渡す。
+                // 入力は分断されて飛んでくるかも知れない。そのため、\r\nで終端していない文字列が
+                // 飛んできた場合は、次回のためにprevに保存しておく。
+                // あきらかに非効率な実装だが、とりあえずこれで。
+                // FIXME:
+                // 文字列のコピーが起こらず、もう少しreadableなコンテナを作る。
+                auto input = prev + src;
+                std::string::size_type i = 0, p = 0;
+                while (i < input.size() && (i = input.find_first_of("\n", i)) !=
+                                               std::string::npos) {
+                    i++;
+                    auto length = i - p - 2;
+                    if (length > 0)
+                        func(helper::str2json(input.substr(p, length)));
+                    p = i;
+                }
+                prev = input.substr(p, input.size() - p);
+            });
     }
 };
 }  // namespace yellow
@@ -261,8 +279,10 @@ int main(int argc, char** argv)
     yellow::Twitter twitter(oauth);
 
     // とりあえずUserstreamを生のまま流すだけ。
-    twitter.stream_user_json(
-        [](const picojson::value& json) { std::cout << json << std::endl; });
+    twitter.stream_user_json([](const picojson::value& json) {
+        YELLOW_ASSERT(!json.is<picojson::null>());
+        json.serialize(std::ostream_iterator<char>(std::cout), true);
+    });
 
     return 0;
 }

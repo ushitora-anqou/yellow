@@ -16,6 +16,7 @@ namespace yellow {
 #define YELLOW_ASSERT(cond) assert(cond);
 #define YELLOW_RANGE(con) std::begin(con), std::end(con)
 
+// libcurlの極薄！1mmラッパー。
 class CurlHandler {
 private:
     std::shared_ptr<CURL> handle_;
@@ -23,14 +24,18 @@ private:
 public:
     CurlHandler() : handle_(curl_easy_init(), curl_easy_cleanup) {}
 
+    // curl_easy_setopt(3)のラッパー。
     template <class T>
     void setopt(CURLoption option, T&& param)
     {
         curl_easy_setopt(handle_.get(), option, param);
     }
 
-    static size_t perform_callback(void* ptr, size_t size, size_t nmemb,
-                                   void* data)
+    // CURLOPT_WRITEFUNCTIONに指定するためのコールバック関数。
+    // CURLOPT_WRITEDATAで指定されたstd::functionを取り出して、
+    // 受け取った情報を引数に呼ぶ。
+    static size_t curl_writefunc(void* ptr, size_t size, size_t nmemb,
+                                 void* data)
     {
         auto* callback =
             reinterpret_cast<std::function<void(char*, size_t)>*>(data);
@@ -40,10 +45,14 @@ public:
         return realsize;
     }
 
+    // curl_easy_perform(3)のラッパー。
+    // 勝手にCURLOPT_WRITEFUNCTION, CURLOPT_WRITEDATA, CURLOPT_ERRORBUFFERを
+    // ハックして、std::functionのコールバックが適切に呼ばれるようにする。
+    // エラーが起こった場合にはエラーを投げる。
     void perform(const std::function<void(char*, size_t)>& callback)
     {
         char error_buffer[CURL_ERROR_SIZE * 2] = {};
-        setopt(CURLOPT_WRITEFUNCTION, perform_callback);
+        setopt(CURLOPT_WRITEFUNCTION, curl_writefunc);
         setopt(CURLOPT_WRITEDATA, &callback);
         setopt(CURLOPT_ERRORBUFFER, error_buffer);
         auto res = curl_easy_perform(handle_.get());
@@ -51,6 +60,10 @@ public:
     }
 };
 
+// OAuth認証を行うためのクラス。
+// 基本的にはliboauthcppのラッパー。
+// 以下出てくる ::OAuth::hogehgoe は、liboauthcppのOAuth名前空間を指す。
+// 普通に OAuth と書くと yellow::OAuth を指してしまう。
 class OAuth {
 private:
     std::shared_ptr<::OAuth::Consumer> consumer_;
@@ -58,6 +71,8 @@ private:
     std::shared_ptr<::OAuth::Token> access_token_;
 
 private:
+    // HTTPS通信でGETを行うための関数。
+    // 要するにurlの先の情報を引っ張ってきて、戻り値で返す。
     std::string get_https(const std::string& url)
     {
         CurlHandler curl;
@@ -90,6 +105,7 @@ public:
 
     ::OAuth::Client& get_client() { return *client_; }
 
+    // すでにある access token から内部パラメータを作成する。
     void construct_from_raw(const std::string& access_token_key,
                             const std::string& access_token_secret)
     {
@@ -99,6 +115,9 @@ public:
                                                     access_token_.get());
     }
 
+    // PINを使用して access token を作り、内部パラメータとして設定する。
+    // 引数のコールバック関数は、PINを得るためのURLを引数として受け取り、
+    // ユーザが入力したPINを戻り値として返す。
     template <class Callback>
     void construct_from_pin(Callback cb)
     {
@@ -110,6 +129,7 @@ public:
             access_token_url_base =
                 "https://api.twitter.com/oauth/access_token";
 
+        // request token をまず取得する。
         ::OAuth::Client oauth(consumer_.get());
         auto request_token = ::OAuth::Token::extract(
             get_https(request_token_url_base + "?" +
@@ -119,6 +139,7 @@ public:
         request_token.setPin(
             cb(authorize_url_base + "?oauth_token=" + request_token.key()));
 
+        // その次に access token を取得する。
         oauth = ::OAuth::Client(consumer_.get(), &request_token);
         auto token =
             ::OAuth::Token::extract(::OAuth::ParseKeyValuePairs(get_https(
@@ -134,11 +155,14 @@ public:
     }
 };
 
+// Twitter から情報を引っ張ってくるためのクラス。
 class Twitter {
 private:
     OAuth oauth_;
 
 private:
+    // Streaming API を使用して Twitter に接続するための関数。
+    // 受信があると callback に文字列として飛んでくる。
     void stream_get(const std::string& url,
                     std::function<void(const std::string&)> callback)
     {
@@ -163,6 +187,7 @@ private:
 public:
     Twitter(OAuth oauth) : oauth_(oauth) {}
 
+    // Userstream を得るための関数。user.json
     void stream_user_json(std::function<void(const picojson::value&)> func)
     {
         std::stringstream ss;
@@ -181,12 +206,14 @@ public:
 };
 }  // namespace yellow
 
+// filename というファイルが存在するかを返す。
 bool does_file_exist(const std::string& filename)
 {
     std::ifstream ifs(filename);
     return ifs.is_open();
 }
 
+// JSON ファイルを読み込む。
 picojson::value read_json(const std::string& filename)
 {
     std::ifstream ifs(filename);
@@ -200,10 +227,12 @@ picojson::value read_json(const std::string& filename)
 
 int main(int argc, char** argv)
 {
+    // まずOAuth認証を行う。
     yellow::OAuth oauth;
 
     const std::string cache_filepath = yellow::Config::cache_file_path();
     if (does_file_exist(cache_filepath)) {
+        // cache fileが存在するなら、そこに入っているaccess tokenを使用する。
         std::cout << "read cache" << std::endl;
         auto json = read_json(cache_filepath).get<picojson::object>();
         oauth.construct_from_raw(
@@ -211,6 +240,7 @@ int main(int argc, char** argv)
             json["access_token_secret"].get<std::string>());
     }
     else {
+        // cache が無ければPINを使用してaccess tokenを取得する。
         std::cout << "pin" << std::endl;
         oauth.construct_from_pin([](const std::string& url) {
             std::string pin;
@@ -219,6 +249,7 @@ int main(int argc, char** argv)
             return pin;
         });
 
+        // 取得したaccess tokenは再利用可能なのでcacheとして保存しておく。
         std::ofstream ofs(cache_filepath);
         YELLOW_ASSERT(ofs);
         ofs << "{\"access_token_key\":\"" << oauth.get_access_token_key()
@@ -226,8 +257,10 @@ int main(int argc, char** argv)
             << oauth.get_access_token_secret() << "\"}" << std::endl;
     }
 
+    // Twitterとの戦いを始める。
     yellow::Twitter twitter(oauth);
 
+    // とりあえずUserstreamを生のまま流すだけ。
     twitter.stream_user_json(
         [](const picojson::value& json) { std::cout << json << std::endl; });
 

@@ -13,7 +13,6 @@
 
 ## 使い方
 
-- `cd vendor/twitcurl/libtwitcurl && make install`
 - `make`
 - `./yellow`
 
@@ -30,7 +29,7 @@
 あっんなこっといーいな、でっきたっらいーいなー
 
 - 鮟鱇は主に水曜日の10:30〜16:00ぐらいに開発する予定です。
-~~- 今はtwitcurlを使っていますが、近い内にliboauthcppに移行します。~~
+- ~~今はtwitcurlを使っていますが、近い内にliboauthcppに移行します。~~
 - GDK付近のものを使ってGUIを作りたい。GDK何も知らんけど。
     - main loopはGUIのほうでもって、Twitterから情報を引っ張ってくるのは別threadで回す。
 - Mastodon対応もしたい。

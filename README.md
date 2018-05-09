@@ -23,14 +23,14 @@
 それ以外（`vendor`以下）のソースコードは各々のライセンスに依存します。
 
 - `picojson` は[PicoJSON](https://github.com/kazuho/picojson)から引っ張ってきました。[2条項BSDライセンス](https://github.com/kazuho/picojson/blob/master/LICENSE) です。
-- `twitcurl` は[twitcurl](https://github.com/swatkat/twitcurl)から引っ張ってきました。[MITライセンス](https://github.com/swatkat/twitcurl/blob/master/libtwitcurl/COPYING) です。
+- `liboauthcpp` は[liboauthcpp](https://github.com/sirikata/liboauthcpp)から引っ張ってきました。[MITライセンス](https://github.com/sirikata/liboauthcpp/blob/master/LICENSE) です。
 
 ## 構想
 
 あっんなこっといーいな、でっきたっらいーいなー
 
 - 鮟鱇は主に水曜日の10:30〜16:00ぐらいに開発する予定です。
-- 今はtwitcurlを使っていますが、近い内にliboauthcppに移行します。
+~~- 今はtwitcurlを使っていますが、近い内にliboauthcppに移行します。~~
 - GDK付近のものを使ってGUIを作りたい。GDK何も知らんけど。
     - main loopはGUIのほうでもって、Twitterから情報を引っ張ってくるのは別threadで回す。
 - Mastodon対応もしたい。

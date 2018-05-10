@@ -14,6 +14,7 @@
 ## 使い方
 
 ### ｲﾝｽｺ
+- libcurlが必要なので適当に入れる。Ubuntuなら`sudo apt install libcurl4-openssl-dev`など。
 - `git clone https://github.com/ushitora-anqou/yellow.git`
 - `git checkout origin/develop`
 - `git submodule init`

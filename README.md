@@ -13,8 +13,18 @@
 
 ## 使い方
 
+### ｲﾝｽｺ
+- `git clone https://github.com/ushitora-anqou/yellow.git`
+- `git checkout origin/develop`
+- `git submodule init`
+- `git submodule update`
 - `make`
+
+### 起動！
 - `./yellow`
+- 初めて使う場合（`cache.json`が無い場合）はPIN認証をするため、表示されたURLをブラウザで開く。
+- 認証を行い、表示されたPINを打ち込む。
+- Userstreamが流れるよ！　すごい！（すごくない）
 
 ## ライセンス
 
@@ -29,8 +39,8 @@
 あっんなこっといーいな、でっきたっらいーいなー
 
 - 鮟鱇は主に水曜日の10:30〜16:00ぐらいに開発する予定です。
-- ~~今はtwitcurlを使っていますが、近い内にliboauthcppに移行します。~~
-- GDK付近のものを使ってGUIを作りたい。GDK何も知らんけど。
+- ~~今はtwitcurlを使っていますが、近い内にliboauthcppに移行します。~~done.
+- ~~GDK付近のものを使ってGUIを作りたい。GDK何も知らんけど。~~突如wxWidgetsを採用しました。wxAUIはいいぞ！
     - main loopはGUIのほうでもって、Twitterから情報を引っ張ってくるのは別threadで回す。
 - Mastodon対応もしたい。
 - とりあえずmikutterっぽいなにかを目指す。
@@ -60,3 +70,17 @@
     - その場合はIssueをぶったててください。
     - ソフトウェアをただ動かすだけの人って、自分で感じるよりもかなり貴重だったりするのだ。
 
+## How to Contribute
+
+「貢献」って書くとダサいけど、"Contribution"って書くとかっこいいよね。
+
+### 一般的な話
+
+- コード内の`FIXME`とか`TODO`とかを探して実装する。
+- ソースコードを`git clone`から初めて動かしてみて、どこかで動かないことが無いか確認する。
+- 起動させてバグを見つける。
+
+### いまやってほしいこと
+
+- （特になし）
+    - 当分は右往左往しながら骨格を作る作業になりそう。

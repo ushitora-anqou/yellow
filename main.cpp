@@ -3,7 +3,11 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <mutex>
+#include <shared_mutex>
 #include <sstream>
+#include <thread>
+#include <vector>
 
 #include <curl/curl.h>
 #include "liboauthcpp/liboauthcpp.h"
@@ -222,6 +226,42 @@ public:
             });
     }
 };
+
+struct Event {
+    std::string utag, dtag, content;
+};
+using EventPtr = std::shared_ptr<Event>;
+
+class EventCenter {
+private:
+    std::shared_timed_mutex mtx_;
+    std::vector<EventPtr> events_;
+
+public:
+    EventCenter() {}
+
+    void add(EventPtr event);
+    std::pair<int, std::vector<EventPtr>> get_since(int since_id);
+};
+
+void EventCenter::add(EventPtr event)
+{
+    std::lock_guard<std::shared_timed_mutex> lock(mtx_);
+    events_.push_back(event);
+}
+
+std::pair<int, std::vector<EventPtr>> EventCenter::get_since(int since_id)
+{
+    std::shared_lock<std::shared_timed_mutex> lock(mtx_);
+
+    if (events_.size() <= since_id)
+        return std::make_pair(since_id, std::vector<EventPtr>());
+    std::vector<EventPtr> ret;
+    std::copy(events_.begin() + since_id, events_.end(),
+              std::back_inserter(ret));
+    return std::make_pair(since_id + ret.size(), ret);
+}
+
 }  // namespace yellow
 
 // filename というファイルが存在するかを返す。
@@ -245,44 +285,61 @@ picojson::value read_json(const std::string& filename)
 
 int main(int argc, char** argv)
 {
-    // まずOAuth認証を行う。
-    yellow::OAuth oauth;
+    yellow::EventCenter ec;
 
-    const std::string cache_filepath = yellow::Config::cache_file_path();
-    if (does_file_exist(cache_filepath)) {
-        // cache fileが存在するなら、そこに入っているaccess tokenを使用する。
-        std::cout << "read cache" << std::endl;
-        auto json = read_json(cache_filepath).get<picojson::object>();
-        oauth.construct_from_raw(
-            json["access_token_key"].get<std::string>(),
-            json["access_token_secret"].get<std::string>());
-    }
-    else {
-        // cache が無ければPINを使用してaccess tokenを取得する。
-        std::cout << "pin" << std::endl;
-        oauth.construct_from_pin([](const std::string& url) {
-            std::string pin;
-            std::cout << url << std::endl;
-            std::cin >> pin;
-            return pin;
+    std::thread curl_thread([&ec] {
+        // まずOAuth認証を行う。
+        yellow::OAuth oauth;
+
+        const std::string cache_filepath = yellow::Config::cache_file_path();
+        if (does_file_exist(cache_filepath)) {
+            // cache fileが存在するなら、そこに入っているaccess
+            // tokenを使用する。
+            std::cout << "read cache" << std::endl;
+            auto json = read_json(cache_filepath).get<picojson::object>();
+            oauth.construct_from_raw(
+                json["access_token_key"].get<std::string>(),
+                json["access_token_secret"].get<std::string>());
+        }
+        else {
+            // cache が無ければPINを使用してaccess tokenを取得する。
+            std::cout << "pin" << std::endl;
+            oauth.construct_from_pin([](const std::string& url) {
+                std::string pin;
+                std::cout << url << std::endl;
+                std::cin >> pin;
+                return pin;
+            });
+
+            // 取得したaccess tokenは再利用可能なのでcacheとして保存しておく。
+            std::ofstream ofs(cache_filepath);
+            YELLOW_ASSERT(ofs);
+            ofs << "{\"access_token_key\":\"" << oauth.get_access_token_key()
+                << "\", \"access_token_secret\":\""
+                << oauth.get_access_token_secret() << "\"}" << std::endl;
+        }
+
+        // Twitterとの戦いを始める。
+        yellow::Twitter twitter(oauth);
+
+        twitter.stream_user_json([&ec](const picojson::value& json) {
+            YELLOW_ASSERT(!json.is<picojson::null>());
+            ec.add(std::make_shared<yellow::Event>(
+                yellow::Event({"twitter", "event", json.serialize(true)})));
         });
-
-        // 取得したaccess tokenは再利用可能なのでcacheとして保存しておく。
-        std::ofstream ofs(cache_filepath);
-        YELLOW_ASSERT(ofs);
-        ofs << "{\"access_token_key\":\"" << oauth.get_access_token_key()
-            << "\", \"access_token_secret\":\""
-            << oauth.get_access_token_secret() << "\"}" << std::endl;
-    }
-
-    // Twitterとの戦いを始める。
-    yellow::Twitter twitter(oauth);
-
-    // とりあえずUserstreamを生のまま流すだけ。
-    twitter.stream_user_json([](const picojson::value& json) {
-        YELLOW_ASSERT(!json.is<picojson::null>());
-        json.serialize(std::ostream_iterator<char>(std::cout), true);
     });
+
+    int since_id = 0;
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        auto res = ec.get_since(since_id);
+        if (since_id == res.first) continue;
+        since_id = res.first;
+        for (auto&& ev : res.second) {
+            std::cout << ev->content << std::endl;
+        }
+    }
 
     return 0;
 }

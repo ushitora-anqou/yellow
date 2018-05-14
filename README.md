@@ -40,9 +40,10 @@
 あっんなこっといーいな、でっきたっらいーいなー
 
 - 鮟鱇は主に水曜日の10:30〜16:00ぐらいに開発する予定です。
-- ~~今はtwitcurlを使っていますが、近い内にliboauthcppに移行します。~~done.
-- ~~GDK付近のものを使ってGUIを作りたい。GDK何も知らんけど。~~突如wxWidgetsを採用しました。wxAUIはいいぞ！
+- ~~今はtwitcurlを使っていますが、近い内にliboauthcppに移行します。~~ done.
+- ~~GDK付近のものを使ってGUIを作りたい。GDK何も知らんけど。~~ 突如wxWidgetsを採用しました。wxAUIはいいぞ！
     - main loopはGUIのほうでもって、Twitterから情報を引っ張ってくるのは別threadで回す。
+    - と思ったけどidleイベント使えばスレッド一つでもどうにかなる説がある。
 - Mastodon対応もしたい。
 - とりあえずmikutterっぽいなにかを目指す。
     - はりぼてmikutter。

@@ -83,6 +83,8 @@ void AsyncNetwork::update()
     }
 }
 
+// もう少しで封印されるuser.jsonを引っ張ってくるプロセスを開始するための関数。
+// とりあえず8月16日までは動くらしい。ジャック☆ドーシーの気が変わらなければ。
 void TwitterWorld::stream_user_json(AsyncNetwork& net)
 {
     const static std::string url =
@@ -137,7 +139,6 @@ int main(int argc, char** argv)
 {
     yellow::AsyncNetwork net;
     yellow::OAuth oauth;
-    std::shared_ptr<yellow::TwitterWorld> twitter;
 
     const std::string cache_filepath = yellow::Config::cache_file_path();
     if (does_file_exist(cache_filepath)) {
@@ -148,18 +149,20 @@ int main(int argc, char** argv)
         oauth.construct_from_raw(
             json["access_token_key"].get<std::string>(),
             json["access_token_secret"].get<std::string>());
-        twitter = std::make_shared<yellow::TwitterWorld>(oauth);
     }
     else {
+        // OAuth認証を行う。Callback機構を使用してネットワーク越しに通信を行う。
+        // oauth変数のスコープに注意。これがデストラクトされると、
+        // Callback内で存在しないoauth変数を扱うことになる。
         oauth.get_auth_info(net, [&](const std::string& key,
                                      const std::string& secret,
                                      const std::string& url) {
             std::cout << url << std::endl;
             std::string pin;
             std::cin >> pin;
-            oauth.construct_from_pin(key, secret, pin, net, [&]() {
-                std::cout << oauth.get_access_token_key() << std::endl;
-                twitter = std::make_shared<yellow::TwitterWorld>(oauth);
+            oauth.construct_from_pin(key, secret, pin, net, [&] {
+                // 得られたaccess tokenを保存しておく。
+                // 次回の起動時にはこれが使用される。
                 std::ofstream ofs(cache_filepath);
                 YELLOW_ASSERT(ofs);
                 ofs << "{\"access_token_key\":\""
@@ -170,13 +173,13 @@ int main(int argc, char** argv)
         });
     }
 
-    bool is_twitter_on = false;
+    std::shared_ptr<yellow::TwitterWorld> twitter;
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
         net.update();
 
-        if (!is_twitter_on && twitter) {
-            is_twitter_on = true;
+        if (!twitter && oauth.has_constructed()) {
+            twitter = std::make_shared<yellow::TwitterWorld>(oauth);
             twitter->stream_user_json(net);
             twitter->add_observer(0, [](picojson::value json) {
                 json.serialize(std::ostream_iterator<char>(std::cout), true);

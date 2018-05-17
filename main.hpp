@@ -79,6 +79,8 @@ public:
     {
     }
 
+    bool has_constructed() { return access_token_ != nullptr; }
+
     const std::string& get_access_token_key() const
     {
         return access_token_->key();

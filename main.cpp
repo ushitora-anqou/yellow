@@ -46,7 +46,7 @@ void AsyncNetwork::https_get(const std::string& url, int timeout,
     curl_easy_setopt(handle.curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(handle.curl, CURLOPT_HTTPGET, 1);
     curl_easy_setopt(handle.curl, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_easy_setopt(handle.curl, CURLOPT_TIMEOUT, timeout);
+    if (timeout >= 0) curl_easy_setopt(handle.curl, CURLOPT_TIMEOUT, timeout);
     curl_easy_setopt(handle.curl, CURLOPT_WRITEFUNCTION, curl_writefunc);
     curl_easy_setopt(handle.curl, CURLOPT_WRITEDATA, handle_ptr.get());
     curl_easy_setopt(handle.curl, CURLOPT_ERRORBUFFER, handle.error_buffer);

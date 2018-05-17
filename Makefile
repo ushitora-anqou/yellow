@@ -2,7 +2,7 @@ CXXFLAGS=-g -O0 -MMD -MP -Wall -std=c++17 -I./vendor/liboauthcpp/include -I./ven
 LDFLAGS=-lcurl -lpthread
 CPPS=main.cpp $(wildcard vendor/liboauthcpp/src/*.cpp)
 OBJS=$(CPPS:.cpp=.o)
-DEPS=$(OBJS.o=.d)
+DEPS=$(OBJS:.o=.d)
 
 yellow: $(OBJS)
 	g++ -o $@ $^ $(LDFLAGS)

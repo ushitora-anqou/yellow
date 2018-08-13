@@ -34,6 +34,7 @@
 
 - `picojson` は[PicoJSON](https://github.com/kazuho/picojson)から引っ張ってきました。[2条項BSDライセンス](https://github.com/kazuho/picojson/blob/master/LICENSE) です。
 - `liboauthcpp` は[liboauthcpp](https://github.com/sirikata/liboauthcpp)から引っ張ってきました。[MITライセンス](https://github.com/sirikata/liboauthcpp/blob/master/LICENSE) です。
+- `curlcpp` は[curlcpp](https://github.com/JosephP91/curlcpp)から引っ張ってきました。[MITライセンス](https://github.com/JosephP91/curlcpp/blob/master/LICENSE) です。
 
 ## 構想
 
